@@ -1,0 +1,69 @@
+name: attachlog
+
+x-jwt-secret: &jwt-secret ${JWT_SECRET:-dev-secret-change-me-use-32-chars-min}
+
+services:
+  placement-service:
+    build: ./placement-service
+    image: attachlog/placement-service:1.0.0
+    environment:
+      DATABASE_URL: sqlite:////data/placement.db
+      JWT_SECRET: *jwt-secret
+      TERM_START: "2026-09-01"
+      TERM_END: "2027-02-28"
+    volumes:
+      - placement-data:/data
+    ports:
+      - "8001:8001"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8001/health', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  logbook-service:
+    build: ./logbook-service
+    image: attachlog/logbook-service:1.0.0
+    depends_on:
+      placement-service:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: sqlite:////data/logbook.db
+      JWT_SECRET: *jwt-secret
+      PLACEMENT_SERVICE_URL: http://placement-service:8001
+    volumes:
+      - logbook-data:/data
+    ports:
+      - "8002:8002"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8002/health', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+  bff:
+    build: ./bff
+    image: attachlog/bff:1.0.0
+    depends_on:
+      placement-service:
+        condition: service_healthy
+      logbook-service:
+        condition: service_healthy
+    environment:
+      JWT_SECRET: *jwt-secret
+      PLACEMENT_SERVICE_URL: http://placement-service:8001
+      LOGBOOK_SERVICE_URL: http://logbook-service:8002
+    ports:
+      - "8003:8003"
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8003/health', timeout=2)"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+      start_period: 10s
+
+volumes:
+  placement-data:
+  logbook-data:

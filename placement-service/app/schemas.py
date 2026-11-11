@@ -26,6 +26,9 @@ class PlacementUpdate(BaseModel):
     company_supervisor_id: str = Field(min_length=1, max_length=50)
     academic_supervisor_id: str = Field(min_length=1, max_length=50)
 
+    model_config = ConfigDict(json_schema_extra={"examples": [
+        {"company_supervisor_id": "cs-2", "academic_supervisor_id": "as-1"}]})
+
 
 class FinalEvaluation(BaseModel):
     score: int = Field(ge=0, le=20)
@@ -35,7 +38,13 @@ class FinalEvaluation(BaseModel):
 
 
 class PlacementOut(BaseModel):
-    model_config = ConfigDict(from_attributes=True)
+    model_config = ConfigDict(from_attributes=True, json_schema_extra={"examples": [{
+        "id": "5c1e6f2a-9b7d-4c3e-8a1f-2d6b9e4c7a10",
+        "student_id": "stu-1", "student_name": "Clarisse Ngo",
+        "company_name": "Douala Tech SARL", "company_city": "Douala",
+        "company_supervisor_id": "cs-1", "academic_supervisor_id": "as-1",
+        "start_date": "2026-09-07", "end_date": "2026-11-29",
+        "total_weeks": 12, "status": "open", "final_score": None, "final_comment": None}]})
 
     id: str
     student_id: str
@@ -58,6 +67,16 @@ class PlacementPage(BaseModel):
     page_size: int
     total: int
 
+    model_config = ConfigDict(json_schema_extra={"examples": [{
+        "items": [{
+            "id": "5c1e6f2a-9b7d-4c3e-8a1f-2d6b9e4c7a10",
+            "student_id": "stu-1", "student_name": "Clarisse Ngo",
+            "company_name": "Douala Tech SARL", "company_city": "Douala",
+            "company_supervisor_id": "cs-1", "academic_supervisor_id": "as-1",
+            "start_date": "2026-09-07", "end_date": "2026-11-29",
+            "total_weeks": 12, "status": "open", "final_score": None, "final_comment": None}],
+        "page": 1, "page_size": 10, "total": 1}]})
+
 
 class ErrorBody(BaseModel):
     code: str
@@ -68,3 +87,29 @@ class ErrorBody(BaseModel):
 class ErrorResponse(BaseModel):
     """The one error format of every service: {"error": {"code", "message", "details"}}."""
     error: ErrorBody
+
+    model_config = ConfigDict(json_schema_extra={"examples": [{
+        "error": {"code": "placement_not_found", "message": "Placement P9 not found", "details": None}}]})
+
+
+class TokenRequest(BaseModel):
+    """Development helper: pick the user and role, get a signed JWT back."""
+    sub: str = Field(min_length=1, max_length=50)
+    role: Literal["student", "company_supervisor", "academic_supervisor", "coordinator"]
+
+    model_config = ConfigDict(json_schema_extra={"examples": [
+        {"sub": "stu-1", "role": "student"},
+        {"sub": "co-1", "role": "coordinator"}]})
+
+
+class TokenResponse(BaseModel):
+    access_token: str
+    token_type: Literal["bearer"] = "bearer"
+    expires_in: int
+    sub: str
+    role: str
+
+    model_config = ConfigDict(json_schema_extra={"examples": [{
+        "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example.signature",
+        "token_type": "bearer", "expires_in": 28800,
+        "sub": "co-1", "role": "coordinator"}]})

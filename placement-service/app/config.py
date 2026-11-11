@@ -13,3 +13,11 @@ def term_end() -> date:
 
 def database_url() -> str:
     return os.getenv("DATABASE_URL", "sqlite:///./placement.db")
+
+
+def jwt_secret() -> str:
+    return os.getenv("JWT_SECRET", "dev-secret-change-me-use-32-chars-min")
+
+
+def jwt_ttl_minutes() -> int:
+    return int(os.getenv("JWT_TTL_MINUTES", "480"))

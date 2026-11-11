@@ -1,0 +1,987 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AttachLog Placement Service",
+    "description": "Placements managed by the coordinator once per term. Get a token from POST /v1/auth/token, then click Authorize.",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/v1/auth/token": {
+      "post": {
+        "tags": [
+          "auth"
+        ],
+        "summary": "Issue Token",
+        "description": "Return a signed HS256 token for the given user id and role.\n\nThis is a development convenience (there is no user store yet); the real\ndeployment must replace it with a proper login endpoint.",
+        "operationId": "issue_token_v1_auth_token_post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TokenRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TokenResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Unprocessable Content",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/v1/placements": {
+      "post": {
+        "tags": [
+          "placements"
+        ],
+        "summary": "Create Placement",
+        "description": "Create a placement (coordinator). The dates must lie inside the term set by TERM_START and TERM_END.",
+        "operationId": "create_placement_v1_placements_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlacementCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlacementOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        }
+      },
+      "get": {
+        "tags": [
+          "placements"
+        ],
+        "summary": "List Placements",
+        "description": "List placements, filtered by status or student, one page at a time.",
+        "operationId": "list_placements_v1_placements_get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "status",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^(open|closed)$"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Status"
+            }
+          },
+          {
+            "name": "student_id",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "null"
+                }
+              ],
+              "title": "Student Id"
+            }
+          },
+          {
+            "name": "page",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "minimum": 1,
+              "default": 1,
+              "title": "Page"
+            }
+          },
+          {
+            "name": "page_size",
+            "in": "query",
+            "required": false,
+            "schema": {
+              "type": "integer",
+              "maximum": 100,
+              "minimum": 1,
+              "default": 10,
+              "title": "Page Size"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlacementPage"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        }
+      }
+    },
+    "/v1/placements/{placement_id}": {
+      "get": {
+        "tags": [
+          "placements"
+        ],
+        "summary": "Get Placement",
+        "operationId": "get_placement_v1_placements__placement_id__get",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "placement_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Placement Id"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlacementOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": [
+          "placements"
+        ],
+        "summary": "Update Placement",
+        "description": "Change the supervisors of an open placement (coordinator).",
+        "operationId": "update_placement_v1_placements__placement_id__put",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "placement_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Placement Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/PlacementUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlacementOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        }
+      }
+    },
+    "/v1/placements/{placement_id}/close": {
+      "post": {
+        "tags": [
+          "placements"
+        ],
+        "summary": "Close Placement",
+        "description": "Close the placement and record the final evaluation (coordinator).",
+        "operationId": "close_placement_v1_placements__placement_id__close_post",
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "placement_id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Placement Id"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/FinalEvaluation"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/PlacementOut"
+                }
+              }
+            }
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unauthorized"
+          },
+          "403": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Forbidden"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Not Found"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Conflict"
+          },
+          "422": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ErrorResponse"
+                }
+              }
+            },
+            "description": "Unprocessable Content"
+          }
+        }
+      }
+    },
+    "/health": {
+      "get": {
+        "tags": [
+          "health"
+        ],
+        "summary": "Health",
+        "description": "Liveness/readiness probe.",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ErrorBody": {
+        "properties": {
+          "code": {
+            "type": "string",
+            "title": "Code"
+          },
+          "message": {
+            "type": "string",
+            "title": "Message"
+          },
+          "details": {
+            "anyOf": [
+              {
+                "items": {},
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Details"
+          }
+        },
+        "type": "object",
+        "required": [
+          "code",
+          "message"
+        ],
+        "title": "ErrorBody"
+      },
+      "ErrorResponse": {
+        "properties": {
+          "error": {
+            "$ref": "#/components/schemas/ErrorBody"
+          }
+        },
+        "type": "object",
+        "required": [
+          "error"
+        ],
+        "title": "ErrorResponse",
+        "description": "The one error format of every service: {\"error\": {\"code\", \"message\", \"details\"}}.",
+        "examples": [
+          {
+            "error": {
+              "code": "placement_not_found",
+              "message": "Placement P9 not found"
+            }
+          }
+        ]
+      },
+      "FinalEvaluation": {
+        "properties": {
+          "score": {
+            "type": "integer",
+            "maximum": 20.0,
+            "minimum": 0.0,
+            "title": "Score"
+          },
+          "comment": {
+            "type": "string",
+            "maxLength": 1000,
+            "minLength": 1,
+            "title": "Comment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "score",
+          "comment"
+        ],
+        "title": "FinalEvaluation",
+        "examples": [
+          {
+            "comment": "Reliable and curious.",
+            "score": 16
+          }
+        ]
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "PlacementCreate": {
+        "properties": {
+          "student_id": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Student Id"
+          },
+          "student_name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Student Name"
+          },
+          "company_name": {
+            "type": "string",
+            "maxLength": 120,
+            "minLength": 1,
+            "title": "Company Name"
+          },
+          "company_city": {
+            "type": "string",
+            "maxLength": 80,
+            "minLength": 1,
+            "title": "Company City"
+          },
+          "company_supervisor_id": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Company Supervisor Id"
+          },
+          "academic_supervisor_id": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Academic Supervisor Id"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date"
+          }
+        },
+        "type": "object",
+        "required": [
+          "student_id",
+          "student_name",
+          "company_name",
+          "company_city",
+          "company_supervisor_id",
+          "academic_supervisor_id",
+          "start_date",
+          "end_date"
+        ],
+        "title": "PlacementCreate",
+        "examples": [
+          {
+            "academic_supervisor_id": "as-1",
+            "company_city": "Douala",
+            "company_name": "Douala Tech SARL",
+            "company_supervisor_id": "cs-1",
+            "end_date": "2026-11-29",
+            "start_date": "2026-09-07",
+            "student_id": "stu-1",
+            "student_name": "Clarisse Ngo"
+          }
+        ]
+      },
+      "PlacementOut": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "student_id": {
+            "type": "string",
+            "title": "Student Id"
+          },
+          "student_name": {
+            "type": "string",
+            "title": "Student Name"
+          },
+          "company_name": {
+            "type": "string",
+            "title": "Company Name"
+          },
+          "company_city": {
+            "type": "string",
+            "title": "Company City"
+          },
+          "company_supervisor_id": {
+            "type": "string",
+            "title": "Company Supervisor Id"
+          },
+          "academic_supervisor_id": {
+            "type": "string",
+            "title": "Academic Supervisor Id"
+          },
+          "start_date": {
+            "type": "string",
+            "format": "date",
+            "title": "Start Date"
+          },
+          "end_date": {
+            "type": "string",
+            "format": "date",
+            "title": "End Date"
+          },
+          "total_weeks": {
+            "type": "integer",
+            "title": "Total Weeks"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "open",
+              "closed"
+            ],
+            "title": "Status"
+          },
+          "final_score": {
+            "anyOf": [
+              {
+                "type": "integer"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Score"
+          },
+          "final_comment": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Final Comment"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "student_id",
+          "student_name",
+          "company_name",
+          "company_city",
+          "company_supervisor_id",
+          "academic_supervisor_id",
+          "start_date",
+          "end_date",
+          "total_weeks",
+          "status"
+        ],
+        "title": "PlacementOut",
+        "examples": [
+          {
+            "academic_supervisor_id": "as-1",
+            "company_city": "Douala",
+            "company_name": "Douala Tech SARL",
+            "company_supervisor_id": "cs-1",
+            "end_date": "2026-11-29",
+            "id": "5c1e6f2a-9b7d-4c3e-8a1f-2d6b9e4c7a10",
+            "start_date": "2026-09-07",
+            "status": "open",
+            "student_id": "stu-1",
+            "student_name": "Clarisse Ngo",
+            "total_weeks": 12
+          }
+        ]
+      },
+      "PlacementPage": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/PlacementOut"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "page": {
+            "type": "integer",
+            "title": "Page"
+          },
+          "page_size": {
+            "type": "integer",
+            "title": "Page Size"
+          },
+          "total": {
+            "type": "integer",
+            "title": "Total"
+          }
+        },
+        "type": "object",
+        "required": [
+          "items",
+          "page",
+          "page_size",
+          "total"
+        ],
+        "title": "PlacementPage",
+        "examples": [
+          {
+            "items": [
+              {
+                "academic_supervisor_id": "as-1",
+                "company_city": "Douala",
+                "company_name": "Douala Tech SARL",
+                "company_supervisor_id": "cs-1",
+                "end_date": "2026-11-29",
+                "id": "5c1e6f2a-9b7d-4c3e-8a1f-2d6b9e4c7a10",
+                "start_date": "2026-09-07",
+                "status": "open",
+                "student_id": "stu-1",
+                "student_name": "Clarisse Ngo",
+                "total_weeks": 12
+              }
+            ],
+            "page": 1,
+            "page_size": 10,
+            "total": 1
+          }
+        ]
+      },
+      "PlacementUpdate": {
+        "properties": {
+          "company_supervisor_id": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Company Supervisor Id"
+          },
+          "academic_supervisor_id": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Academic Supervisor Id"
+          }
+        },
+        "type": "object",
+        "required": [
+          "company_supervisor_id",
+          "academic_supervisor_id"
+        ],
+        "title": "PlacementUpdate",
+        "description": "Only the supervisors can be changed after creation.",
+        "examples": [
+          {
+            "academic_supervisor_id": "as-1",
+            "company_supervisor_id": "cs-2"
+          }
+        ]
+      },
+      "TokenRequest": {
+        "properties": {
+          "sub": {
+            "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "title": "Sub"
+          },
+          "role": {
+            "type": "string",
+            "enum": [
+              "student",
+              "company_supervisor",
+              "academic_supervisor",
+              "coordinator"
+            ],
+            "title": "Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "sub",
+          "role"
+        ],
+        "title": "TokenRequest",
+        "description": "Development helper: pick the user and role, get a signed JWT back.",
+        "examples": [
+          {
+            "role": "student",
+            "sub": "stu-1"
+          },
+          {
+            "role": "coordinator",
+            "sub": "co-1"
+          }
+        ]
+      },
+      "TokenResponse": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "token_type": {
+            "type": "string",
+            "const": "bearer",
+            "title": "Token Type",
+            "default": "bearer"
+          },
+          "expires_in": {
+            "type": "integer",
+            "title": "Expires In"
+          },
+          "sub": {
+            "type": "string",
+            "title": "Sub"
+          },
+          "role": {
+            "type": "string",
+            "title": "Role"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "expires_in",
+          "sub",
+          "role"
+        ],
+        "title": "TokenResponse",
+        "examples": [
+          {
+            "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.example.signature",
+            "expires_in": 28800,
+            "role": "coordinator",
+            "sub": "co-1",
+            "token_type": "bearer"
+          }
+        ]
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "HTTPBearer": {
+        "type": "http",
+        "scheme": "bearer"
+      }
+    }
+  }
+}

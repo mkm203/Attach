@@ -1,0 +1,123 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: placement-data
+  namespace: attachlog
+  labels:
+    app: placement-service
+    app.kubernetes.io/part-of: attachlog
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: placement-service
+  namespace: attachlog
+  labels:
+    app: placement-service
+    app.kubernetes.io/part-of: attachlog
+spec:
+  replicas: 1
+  # SQLite on a ReadWriteOnce volume: never run two pods against the same file.
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: placement-service
+  template:
+    metadata:
+      labels:
+        app: placement-service
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: placement-service
+          image: attachlog/placement-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8001
+          env:
+            - name: DATABASE_URL
+              value: sqlite:////data/placement.db
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: attachlog-secret
+                  key: JWT_SECRET
+            - name: TERM_START
+              valueFrom:
+                configMapKeyRef:
+                  name: attachlog-config
+                  key: TERM_START
+            - name: TERM_END
+              valueFrom:
+                configMapKeyRef:
+                  name: attachlog-config
+                  key: TERM_END
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: placement-data
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: placement-service
+  namespace: attachlog
+  labels:
+    app: placement-service
+    app.kubernetes.io/part-of: attachlog
+spec:
+  type: ClusterIP
+  selector:
+    app: placement-service
+  ports:
+    - name: http
+      port: 8001
+      targetPort: http

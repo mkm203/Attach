@@ -12,10 +12,14 @@ from app.errors import ApiError
 from app.models import Placement
 from app.schemas import (ErrorResponse, FinalEvaluation, PlacementCreate, PlacementOut, PlacementPage,
                          PlacementUpdate)
+from app.security import User, current_user, require_role
 
 router = APIRouter(prefix="/v1/placements", tags=["placements"])
 DB = Annotated[Session, Depends(get_db)]
-ERR = {404: {"model": ErrorResponse}, 409: {"model": ErrorResponse}, 422: {"model": ErrorResponse}}
+Anyone = Annotated[User, Depends(current_user)]
+Coordinator = Annotated[User, Depends(require_role("coordinator"))]
+ERR = {401: {"model": ErrorResponse}, 403: {"model": ErrorResponse},
+       404: {"model": ErrorResponse}, 409: {"model": ErrorResponse}, 422: {"model": ErrorResponse}}
 
 
 def find(db: Session, placement_id: str) -> Placement:
@@ -25,8 +29,9 @@ def find(db: Session, placement_id: str) -> Placement:
     return placement
 
 
-@router.post("", response_model=PlacementOut, status_code=201, responses={422: ERR[422]})
-def create_placement(data: PlacementCreate, db: DB):
+@router.post("", response_model=PlacementOut, status_code=201,
+             responses={k: ERR[k] for k in (401, 403, 422)})
+def create_placement(data: PlacementCreate, db: DB, user: Coordinator):
     """Create a placement (coordinator). The dates must lie inside the term set by TERM_START and TERM_END."""
     if data.end_date <= data.start_date:
         raise ApiError(422, "invalid_dates", "end_date must be after start_date")
@@ -39,9 +44,9 @@ def create_placement(data: PlacementCreate, db: DB):
     return placement
 
 
-@router.get("", response_model=PlacementPage)
+@router.get("", response_model=PlacementPage, responses={401: ERR[401], 422: ERR[422]})
 def list_placements(
-    db: DB,
+    db: DB, user: Anyone,
     status: Annotated[str | None, Query(pattern="^(open|closed)$")] = None,
     student_id: str | None = None,
     page: Annotated[int, Query(ge=1)] = 1,
@@ -58,13 +63,14 @@ def list_placements(
     return {"items": rows, "page": page, "page_size": page_size, "total": total}
 
 
-@router.get("/{placement_id}", response_model=PlacementOut, responses={404: ERR[404]})
-def get_placement(placement_id: str, db: DB):
+@router.get("/{placement_id}", response_model=PlacementOut, responses={k: ERR[k] for k in (401, 404)})
+def get_placement(placement_id: str, db: DB, user: Anyone):
     return find(db, placement_id)
 
 
-@router.put("/{placement_id}", response_model=PlacementOut, responses={404: ERR[404], 409: ERR[409], 422: ERR[422]})
-def update_placement(placement_id: str, data: PlacementUpdate, db: DB):
+@router.put("/{placement_id}", response_model=PlacementOut,
+            responses={k: ERR[k] for k in (401, 403, 404, 409, 422)})
+def update_placement(placement_id: str, data: PlacementUpdate, db: DB, user: Coordinator):
     """Change the supervisors of an open placement (coordinator)."""
     placement = find(db, placement_id)
     if placement.status == "closed":
@@ -75,8 +81,9 @@ def update_placement(placement_id: str, data: PlacementUpdate, db: DB):
     return placement
 
 
-@router.post("/{placement_id}/close", response_model=PlacementOut, responses={404: ERR[404], 409: ERR[409], 422: ERR[422]})
-def close_placement(placement_id: str, data: FinalEvaluation, db: DB):
+@router.post("/{placement_id}/close", response_model=PlacementOut,
+             responses={k: ERR[k] for k in (401, 403, 404, 409, 422)})
+def close_placement(placement_id: str, data: FinalEvaluation, db: DB, user: Coordinator):
     """Close the placement and record the final evaluation (coordinator)."""
     placement = find(db, placement_id)
     if placement.status == "closed":

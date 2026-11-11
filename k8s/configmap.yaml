@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: attachlog-config
+  namespace: attachlog
+  labels:
+    app.kubernetes.io/part-of: attachlog
+data:
+  TERM_START: "2026-09-01"
+  TERM_END: "2027-02-28"
+  PLACEMENT_SERVICE_URL: http://placement-service:8001
+  LOGBOOK_SERVICE_URL: http://logbook-service:8002

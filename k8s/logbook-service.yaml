@@ -1,0 +1,117 @@
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: logbook-data
+  namespace: attachlog
+  labels:
+    app: logbook-service
+    app.kubernetes.io/part-of: attachlog
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 1Gi
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: logbook-service
+  namespace: attachlog
+  labels:
+    app: logbook-service
+    app.kubernetes.io/part-of: attachlog
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      app: logbook-service
+  template:
+    metadata:
+      labels:
+        app: logbook-service
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: RuntimeDefault
+      containers:
+        - name: logbook-service
+          image: attachlog/logbook-service:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: http
+              containerPort: 8002
+          env:
+            - name: DATABASE_URL
+              value: sqlite:////data/logbook.db
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: attachlog-secret
+                  key: JWT_SECRET
+            - name: PLACEMENT_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: attachlog-config
+                  key: PLACEMENT_SERVICE_URL
+          volumeMounts:
+            - name: data
+              mountPath: /data
+            - name: tmp
+              mountPath: /tmp
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 10
+            timeoutSeconds: 2
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: http
+            initialDelaySeconds: 15
+            periodSeconds: 20
+            timeoutSeconds: 2
+            failureThreshold: 3
+          resources:
+            requests:
+              cpu: 50m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: logbook-data
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: logbook-service
+  namespace: attachlog
+  labels:
+    app: logbook-service
+    app.kubernetes.io/part-of: attachlog
+spec:
+  type: ClusterIP
+  selector:
+    app: logbook-service
+  ports:
+    - name: http
+      port: 8002
+      targetPort: http

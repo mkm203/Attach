@@ -1,0 +1,5 @@
+# Everything needed to run the three services and the test suites locally.
+-r placement-service/requirements.txt
+-r logbook-service/requirements.txt
+-r bff/requirements.txt
+pytest==9.2.0
